@@ -13,20 +13,18 @@ import os
 import sys
 import glob
 import datetime
+import docker
+import re
 
-# These are onhm modules
+# these are onhm modules
 import run_prms
-import prms_verifier
-import prms_outputs2_ncf
-import ncf2cbh
-from fponhm import FpoNHM
 
 RESTARTDIR = 'restart/'
 INDIR = 'input/'
 OUTDIR = 'output/'
 GRIDMET_PROVISIONAL_DAYS = 59
 PRMSPATH = '/work/markstro/operat/repos/prms/prms/prms'
-WORKDIR = '/work/markstro/operat/setup/test/NHM-PRMS_CONUS/'
+WORKDIR = '/var/lib/NHM-PRMS_CONUS/'
 CONTROLPATH = './NHM-PRMS.control'
 PRMSLOGPATH = './prms.log'
 MAKERSPACE = ['dprst_stor_hru', 'gwres_stor', 'hru_impervstor',
@@ -36,38 +34,69 @@ CBHFILES = ['tmin.cbh', 'tmax.cbh', 'prcp.cbh']
 # This one will probably need to change
 FPWRITEDIR = WORKDIR
 
-# Check the restart directory for restart files.
-# Return the date of the latest one.
-def last_simulation_date(dir):
-    foo = glob.glob(dir + RESTARTDIR + '*.restart')
+# Check the restart directory for restart files. Return the date of
+# the latest one.
+def last_simulation_date(client, dir):
+    try:
+        # Run BusyBox container to mount the Docker volume on
+        # /var/lib, and list restart files.
+
+        # TODO: probably should have auto_remove=True here, but we
+        # were having mysterious problems with it. See
+        # https://docker-py.readthedocs.io/en/stable/containers.html#container-objects
+        command = 'sh -c "ls ' + dir + RESTARTDIR + '*.restart"'
+        restart_file_names = client.containers.run(
+            'busybox', command,
+            volumes={'nhm_nhm':
+                     {'bind': '/var/lib', 'mode': 'ro'}}
+        )
+    except docker.errors.ContainerError:
+        print('Restart files not found on Docker volume')
+        exit(1)
+    except docker.errors.ImageNotFound:
+        print('Could not find busybox Docker image')
+        exit(1)
+    except docker.errors.APIError:
+        print('Could not call into Docker API')
+        exit(1)
+
+    # remove any prefix "b'" and suffix "\n'" (don't know yet why
+    # Docker does this)
+    s = re.sub(r'^[^/]+|[\\n\']+$', '', str(restart_file_names))
 
     restart_dates_present = []
-    for fn in foo:
-        head, tail = os.path.split(fn)
-        restart_dates_present.append(datetime.datetime.strptime(tail[0:10], "%Y-%m-%d"))
+    for name in s.split('\\n'):
+        head, tail = os.path.split(name)
+        restart_dates_present.append(
+            datetime.datetime.strptime(tail[0:10], "%Y-%m-%d")
+        )
     
     restart_dates_present.sort(reverse=True)
-    f1 = restart_dates_present[0].date()
-    return f1
+    return restart_dates_present[0].date()
 
 def compute_pull_dates(restart_date):
     today = datetime.date.today()
     yesterday = today - datetime.timedelta(days=1)
     pull_date = yesterday - datetime.timedelta(days=GRIDMET_PROVISIONAL_DAYS)
     
-    # if the restart date is earlier than the pull date, reset the pull date
+    # if the restart date is earlier than the pull date...
     if restart_date < pull_date:
+        # ...reset the pull date
         pull_date = restart_date
         print('log message: pull_date reset to restart_date')
     
     return pull_date, yesterday
 
-
 def main(dir):
+    try:
+        client = docker.from_env() # Initialize Docker API
+    except docker.errors.APIError:
+        print('Could not invoke Docker API')
+        exit(1)
 
     # Determine the date for the last simulation by finding the last
     # restart file.
-    lsd = last_simulation_date(dir)
+    lsd = last_simulation_date(client, dir)
     restart_date = lsd + datetime.timedelta(days=1)
     print('last simulation date = ' + lsd.strftime('%Y-%m-%d'))
     print('restart date = ' + restart_date.strftime('%Y-%m-%d'))
@@ -94,15 +123,18 @@ def main(dir):
     # with open("ofp_log.log", "a") as output:
     #     subprocess.call(ofp_docker_cmd, stdout=output, stderr=output)
     # Code below call fetch-parser thorough; assumes hru*.shp are in INDIR; will output to OUTDIR
-    print('starting Script')
+    print('starting script')
     #numdays = 2
-    fp = FpoNHM()
+    #fp = FpoNHM()
+    client.containers.run()
+
     print('instantiated')
 
     extract_type = 'date'
     numdays = 2
 
-    ready = fp.initialize(dir + INDIR + 'nhm_hru_data/', dir + OUTDIR, dir + INDIR+'nhm_hru_data/weights.csv',
+    ready = fp.initialize(dir + INDIR + 'nhm_hru_data/', dir + OUTDIR,
+                          dir + INDIR + 'nhm_hru_data/weights.csv',
                           type=extract_type,
                           start_date=start_pull_date,
                           end_date=end_pull_date)
