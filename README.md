@@ -1,2 +1,2 @@
-# prms_runners
-Scripts for running NHM-PRMS
+# ONHM Runners
+Scripts for running the operational National Hydrologic Model.
