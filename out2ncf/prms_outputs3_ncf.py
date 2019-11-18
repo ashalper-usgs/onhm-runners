@@ -1,8 +1,9 @@
 # Markstrom
 # Wed Sep 04 09:43:53 MDT 2019
 # 
-# This script runs against a multivariable animation file and writes the
-# contents into a set of netcdf files, one for each variable
+# This script runs against a CSV file and writes the
+# contents into a set of netcdf files, one for each variable. It converts the
+# whole CSV file to a netcdf file. If the files are big, this will be very slow.
 
 #from prms_utils import csv_reader
 import numpy as np
@@ -114,7 +115,7 @@ def main(dir):
     with open(json_file, "r") as read_file:
         cntl = json.load(read_file)
 
-# Read the PRMS outputk
+# Read the PRMS output
     var_names = cntl["output_variables"].keys()
     val_list = []
     dim_list = set()
@@ -160,7 +161,7 @@ def main(dir):
 #            nsegments = len(seg_lat_vals)
 
 # write the ncf file
-        ofn = str(dir) + "/out/" + str(end_date) + "_" + var_name + "_out.nc"
+        ofn = str(dir) + "/output/" + str(end_date) + "_" + var_name + "_out.nc"
     # print('writing netcdf file ' + cntl['ncf_file_name'])
         print('writing netcdf file ' + ofn)
         ncf = Dataset(ofn, 'w', format='NETCDF4_CLASSIC')
@@ -227,7 +228,7 @@ def main(dir):
 
 
 if __name__ == '__main__':
-    dir = "/ssd/markstro/conusStreamTemp/work_lev3"
+    dir = "/work/markstro/operat/setup/test/NHM-PRMS_CONUS"
     argc = len(sys.argv) - 1
     # print(argc)
 

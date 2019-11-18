@@ -132,9 +132,14 @@ def main(dir):
 
     extract_type = 'date'
     numdays = 2
+<<<<<<< HEAD
 
     ready = fp.initialize(dir + INDIR + 'nhm_hru_data/', dir + OUTDIR,
                           dir + INDIR + 'nhm_hru_data/weights.csv',
+=======
+    #initialize(self, iptpath, optpath, weights_file, type=None, days=None, start_date=None, end_date=None)
+`    ready = fp.initialize(dir + INDIR + 'nhm_hru_data/', dir + OUTDIR, dir + INDIR+'nhm_hru_data/weights.csv',
+>>>>>>> master
                           type=extract_type,
                           start_date=start_pull_date,
                           end_date=end_pull_date)
@@ -207,6 +212,17 @@ def main(dir):
         prms_outputs2_ncf.write_ncf(dir, MAKERSPACE)
     
         # Copy these nc files (made in the previous step) to the s3 area.
+        
+        # Run PRMS again to update the restart file
+        end_date_restart = end_pull_date - datetime.timedelta(days=GRIDMET_PROVISIONAL_DAYS)
+        restart_fn = end_date_restart.strftime('%Y-%m-%d') + '.restart'
+        run_prms.run(st=start_prms_date.strftime('%Y-%m-%d'),
+                 et=end_date_restart.strftime('%Y-%m-%d'), prms_path=PRMSPATH,
+                 work_dir=dir, init_flag=True, save_flag=True,
+                 control_file=CONTROLPATH, init_file=init_file,
+                 save_file=restart_fn,
+                 log_file_name=PRMSLOGPATH)
+
 
 if __name__ == '__main__':
     argc = len(sys.argv) - 1

@@ -2,6 +2,8 @@ from netCDF4 import Dataset  # http://code.google.com/p/netcdf4-python/
 from netCDF4 import num2date
 import datetime
 import sys
+import numpy as np
+import csv
 
 def read(nc_fn):
     nc_fid = Dataset(nc_fn, 'r')
@@ -48,10 +50,21 @@ def read(nc_fn):
 # full path required for nc_fn
 def run(dir, nc_fn):
     var_names, base_date, nts, vals = read(nc_fn)
+    
+    # read the mapping
+    nhm_id = np.zeros(109951, dtype = np.int)
+    ii = 0
+    nhm_id_file = dir + 'nhm_id'
+    with open(nhm_id_file) as csv_file:
+        csv_reader = csv.reader(csv_file, delimiter=',')
+        for row in csv_reader:
+            nhm_id[ii] = int(row[0])
+            ii = ii + 1
 
     # Write CBH files.
     for name in var_names:
         v = vals[name]
+        v2 = np.zeros(109951)
         nfeats = len(v[0])
         fn2 = dir + name + ".cbh"
         current_date = base_date
@@ -66,14 +79,23 @@ def run(dir, nc_fn):
                          + str(current_date.day) + ' 0 0 0')
                 for jj in range(nfeats):
                     if name == 'prcp':
-                        v[ii, jj] = v[ii, jj] / 25.4
+                        v2[jj] = v[ii, nhm_id[jj]-1] / 25.4
                     elif name == 'tmax':
-                        v[ii, jj] = v[ii, jj] * 9 / 5 + 32
+                        v2[jj] = v[ii, nhm_id[jj]-1] * 9 / 5 + 32
                     elif name == 'tmin':
-                        v[ii, jj] = v[ii, jj] * 9 / 5 + 32
+                        v2[jj] = v[ii, nhm_id[jj]-1] * 9 / 5 + 32
                     else:
                         "don't know how to convert units"
-                    fp.write(' ' + str(v[ii,jj]))
+                for jj in range(nfeats):
+                    if name == 'prcp':
+                        fp.write(' ' + '{:.2f}'.format(v2[jj]))
+                    elif name == 'tmax':
+                        fp.write(' ' + '{:.1f}'.format(v2[jj]))
+                    elif name == 'tmin':
+                        fp.write(' ' + '{:.1f}'.format(v2[jj]))
+                    else:
+                        fp.write(' ' + '{:.2f}'.format(v2[jj]))
+                        
                 fp.write('\n')
                 current_date += datetime.timedelta(days=1)
 
@@ -91,7 +113,7 @@ if __name__ == '__main__':
         print('setting dir = ' + sys.argv[1])
         dir = sys.argv[1]
     else:
-        dir='/var/lib/nhm/ofp/Output/'
+        dir='/var/lib/nhm/NHM-PRMS_CONUS/input/'
 
     nc_fn = dir + 'climate_'+str(datetime.datetime.now().strftime('%Y_%m_%d'))+'.nc'
 

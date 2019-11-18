@@ -220,10 +220,9 @@ def write_ncf(dir, varnames):
     
     
 def main(dir):
-#    write_ncf(dir)
-    
-# testing for onhm
-    dir = '/work/markstro/operat/setup/test/NHM-PRMS_CONUS/'
+
+    # testing for onhm
+    dir = '/var/lib/nhm/NHM-PRMS_CONUS/'
     VARNAMES = ['dprst_stor_hru','gwres_stor','hru_impervstor','hru_intcpstor',
             'pkwater_equiv','soil_moist_tot']
     write_ncf(dir, VARNAMES)
@@ -232,11 +231,9 @@ def main(dir):
 if __name__ == '__main__':
     dir = "/var/lib/nhm/NHM-PRMS_CONUS"
     argc = len(sys.argv) - 1
-    # print(argc)
 
     if argc == 1:
         print('setting dir = ' + sys.argv[1])
         dir = sys.argv[1]
 
-#    os.chdir(dir)
     main(dir)
