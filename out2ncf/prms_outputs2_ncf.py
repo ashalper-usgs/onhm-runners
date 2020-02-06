@@ -220,9 +220,6 @@ def write_ncf(dir, varnames):
     
     
 def main(dir):
-
-    # testing for onhm
-    dir = '/var/lib/nhm/NHM-PRMS_CONUS/'
     VARNAMES = ['dprst_stor_hru','gwres_stor','hru_impervstor','hru_intcpstor',
             'pkwater_equiv','soil_moist_tot']
     write_ncf(dir, VARNAMES)
